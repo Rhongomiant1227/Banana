@@ -166,7 +166,43 @@ banana/
 - **TailwindCSS** - CSS 框架
 - **Lucide React** - 图标库
 
-## 📝 更新日志
+## � 生产部署
+
+### 1. 构建前端
+```bash
+cd frontend
+npm run build
+```
+
+### 2. 启动后端 (会自动托管前端)
+```bash
+cd backend
+python -m uvicorn app:app --host 0.0.0.0 --port 8000
+```
+
+### 3. 访问应用
+打开浏览器访问 `http://你的服务器IP:8000`
+
+> ⚠️ **注意**: 确保服务器防火墙开放 8000 端口
+
+### 使用 systemd (Linux)
+```bash
+# /etc/systemd/system/banana.service
+[Unit]
+Description=Nano Banana Service
+After=network.target
+
+[Service]
+User=www-data
+WorkingDirectory=/path/to/banana/backend
+ExecStart=/path/to/venv/bin/uvicorn app:app --host 0.0.0.0 --port 8000
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+```
+
+## �📝 更新日志
 
 ### v1.0.0
 - 初始版本发布

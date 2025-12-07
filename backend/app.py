@@ -18,7 +18,8 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from dotenv import load_dotenv
 
@@ -431,6 +432,41 @@ async def verify_api_key(request: ApiKeyRequest):
                 
     except Exception as e:
         return {"valid": False, "message": f"网络错误: {str(e)}"}
+
+
+# ==================== 静态文件服务 (生产环境) ====================
+# 在所有 API 路由之后挂载静态文件
+FRONTEND_DIR = os.path.join(os.path.dirname(__file__), "..", "frontend", "dist")
+
+if os.path.exists(FRONTEND_DIR):
+    # 挂载静态资源 (JS, CSS, 图片等)
+    assets_dir = os.path.join(FRONTEND_DIR, "assets")
+    if os.path.exists(assets_dir):
+        app.mount("/assets", StaticFiles(directory=assets_dir), name="assets")
+    
+    # 首页
+    @app.get("/")
+    async def serve_index():
+        return FileResponse(os.path.join(FRONTEND_DIR, "index.html"))
+    
+    # 所有其他非 API 请求返回 index.html (SPA 路由)
+    @app.get("/{full_path:path}")
+    async def serve_spa(full_path: str):
+        # 如果是 API 请求，跳过
+        if full_path.startswith("api"):
+            raise HTTPException(status_code=404)
+        
+        # 检查是否是静态文件
+        file_path = os.path.join(FRONTEND_DIR, full_path)
+        if os.path.isfile(file_path):
+            return FileResponse(file_path)
+        
+        # 否则返回 index.html (SPA)
+        return FileResponse(os.path.join(FRONTEND_DIR, "index.html"))
+else:
+    @app.get("/")
+    async def root():
+        return {"message": "Nano Banana API", "docs": "/docs", "note": "Frontend not built. Run 'npm run build' in frontend/"}
 
 
 if __name__ == "__main__":
